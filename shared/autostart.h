@@ -21,6 +21,7 @@ struct Entry {
     bool        gnome_enabled = true;   // X-GNOME-Autostart-enabled=false → off
     std::string only_show_in;           // raw ;-list
     std::string not_show_in;
+    std::string app_id;                 // X-FreeBSDX-App: a bundle to launch by id
 };
 
 namespace detail {
@@ -78,6 +79,7 @@ inline bool parse(std::string_view text, Entry& e) {
         else if (k == "X-GNOME-Autostart-enabled") e.gnome_enabled = (v != "false");
         else if (k == "OnlyShowIn")                e.only_show_in = std::string(v);
         else if (k == "NotShowIn")                 e.not_show_in = std::string(v);
+        else if (k == "X-FreeBSDX-App")            e.app_id = std::string(v);
     });
     return !e.exec.empty();
 }
@@ -153,6 +155,17 @@ inline bool isEntryFile(std::string_view name) {
     return name.size() > kExt.size() && name[0] != '.' &&
            name.find('/') == std::string_view::npos &&
            name.substr(name.size() - kExt.size()) == kExt;
+}
+
+// The entry Settings → Login Items writes for a bundle app. xshell launches
+// it by id (resolved binary + XAPP_ID); Exec is the fallback for other
+// desktops.
+inline std::string appEntryFile(std::string_view app_id) {
+    return "freebsdx-" + std::string(app_id) + ".desktop";
+}
+inline std::string appEntry(std::string_view name, std::string_view exec, std::string_view app_id) {
+    return "[Desktop Entry]\nType=Application\nName=" + std::string(name) + "\nExec=" + std::string(exec) +
+           "\nX-FreeBSDX-App=" + std::string(app_id) + "\n";
 }
 
 inline std::string dirPath(std::string_view home) {

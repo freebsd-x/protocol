@@ -668,7 +668,17 @@ enum class ShellOpcode : uint32_t {
     WindowListUpdate = 0x04, // server→client broadcast: taskbar window list changed
     LaunchWithFile   = 0x05, // client→server→shell: open a file with a specific app
     RegisterHotkey   = 0x06, // shell→compositor: bind key combo to a shell InputEventType action
+    SetInputRegion   = 0x07, // shell→compositor: ShellInputRegion — its open popups, so
+                             // pointer input there goes to the shell, not the app below
 };
+
+// Payload for ShellOpcode::SetInputRegion (logical pixels). count_ = 0 clears it.
+struct ShellInputRect { int16_t x_, y_, w_, h_; };
+struct ShellInputRegion {
+    uint32_t       count_;
+    ShellInputRect rects_[31];
+};
+static_assert(sizeof(ShellInputRegion) <= 256);
 
 // Payload for ShellOpcode::RegisterHotkey
 struct HotkeyRequest {
@@ -6721,6 +6731,9 @@ enum class AppTimeLimitOpcode : uint32_t {
     SetLimit      = 0x02, // AppTimeLimitSetRequest → ack + broadcast
     RemoveLimit   = 0x03, // AppTimeLimitRemoveRequest → ack + broadcast
     LimitsChanged = 0x04, // broadcast (no payload — shell re-fetches)
+    LimitReached  = 0x05, // broadcast: AppTimeLimitReached (shell shows "Time's up")
+    Extend        = 0x06, // AppTimeLimitAppRequest (minutes_) → ack: more time today
+    CloseApp      = 0x07, // AppTimeLimitAppRequest → ack: close the app's windows
 };
 
 struct AppTimeLimitPage {
@@ -6747,6 +6760,21 @@ struct AppTimeLimitRemoveRequest {
     uint8_t  pad_[192]; // 64+192 = 256
 };
 static_assert(sizeof(AppTimeLimitRemoveRequest) == 256);
+
+struct AppTimeLimitReached {
+    char     app_id_[64];
+    char     app_name_[64];
+    uint32_t limit_minutes_;   // the daily limit, without today's extensions
+    uint8_t  pad_[124];        // 64+64+4+124 = 256
+};
+static_assert(sizeof(AppTimeLimitReached) == 256);
+
+struct AppTimeLimitAppRequest {
+    char     app_id_[64];
+    uint32_t minutes_;         // Extend: 1..240
+    uint8_t  pad_[188];        // 64+4+188 = 256
+};
+static_assert(sizeof(AppTimeLimitAppRequest) == 256);
 
 // ── Battery Health ───────────────────────────────────────────────────────────
 // com.freebsdx.BatteryHealth — optimized charging + battery wear info.

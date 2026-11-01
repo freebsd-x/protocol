@@ -7080,4 +7080,41 @@ struct DefaultAppRequest {
 };
 static_assert(sizeof(DefaultAppRequest) == 256);
 
+// ── com.freebsdx.Fetch ───────────────────────────────────────────────────────
+// Network fetches for sandboxed apps (a Capsicum app can't open sockets). The
+// compositor checks the URL against the calling app's host allowlist
+// (xserver/fetch_policy.h) and relays it to the xfetch daemon, which does the
+// HTTP(S) and keeps a disk cache; the body comes back as a read-only
+// shared-memory fd attached to the reply (bodies outgrow a 256-byte payload).
+enum class FetchOpcode : uint32_t {
+    Get              = 0x01,  // app → compositor: FetchRequest; reply FetchReply (+ fd when ok)
+    ProviderRegister = 0x10,  // xfetch → compositor: "I serve com.freebsdx.Fetch"
+    ProviderReply    = 0x11,  // xfetch → compositor: FetchReply (+ fd) for a relayed Get
+};
+
+enum class FetchStatus : int32_t {
+    Ok           = 0,
+    Denied       = 1,   // host not allowed for this app
+    NetworkError = 2,
+    TooLarge     = 3,
+    Unavailable  = 4,   // no fetch daemon
+    BadRequest   = 5,
+    HttpError    = 6,   // non-2xx; http_status_ says which
+};
+
+struct FetchRequest {
+    uint32_t flags_;      // reserved, 0
+    char     url_[252];   // NUL-terminated
+};
+static_assert(sizeof(FetchRequest) == 256);
+
+struct FetchReply {
+    int32_t  status_;       // FetchStatus
+    uint32_t http_status_;
+    uint64_t size_;         // body bytes in the attached fd
+    uint32_t from_cache_;
+    uint8_t  pad_[236];
+};
+static_assert(sizeof(FetchReply) == 256);
+
 } // namespace fbx::shared

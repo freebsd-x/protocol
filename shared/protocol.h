@@ -1470,6 +1470,7 @@ enum class AccessibilitySettingsOpcode : uint32_t {
     SetHighContrast = 0x04, // payload: AccessibilityToggleRequest (no response)
     SetMagnifier    = 0x05, // payload: AccessibilityToggleRequest (no response)
     SettingsChanged = 0x06, // broadcast: AccessibilitySettings
+    SetScreenReader = 0x07, // payload: AccessibilityToggleRequest (no response) — speak announcements
 };
 
 struct AccessibilityQuickSettings {
@@ -1477,7 +1478,8 @@ struct AccessibilityQuickSettings {
     float    cursor_scale_;     // 1.0–3.0
     uint32_t high_contrast_;    // 1 = enabled
     uint32_t magnifier_;        // 1 = enabled
-    uint8_t  pad_[240];         // 4+4+4+4+240 = 256
+    uint32_t screen_reader_;    // 1 = announcements are spoken (carved from pad; layout-compatible)
+    uint8_t  pad_[236];         // 4+4+4+4+4+236 = 256
 };
 static_assert(sizeof(AccessibilityQuickSettings) == 256);
 

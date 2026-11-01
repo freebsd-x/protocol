@@ -668,6 +668,10 @@ enum class ShellOpcode : uint32_t {
     WindowListUpdate = 0x04, // server→client broadcast: taskbar window list changed
     LaunchWithFile   = 0x05, // client→server→shell: open a file with a specific app
     RegisterHotkey   = 0x06, // shell→compositor: bind key combo to a shell InputEventType action
+    // shell→compositor: uint32_t on/off — a shell popup that takes typing
+    // (search, launcher, quick note…) is open: send the keyboard to the shell;
+    // off returns it to the window that had it.
+    KeyboardGrab     = 0x08,
     SetInputRegion   = 0x07, // shell→compositor: ShellInputRegion — its open popups, so
                              // pointer input there goes to the shell, not the app below
 };

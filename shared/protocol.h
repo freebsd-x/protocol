@@ -6170,7 +6170,19 @@ enum class AppSandboxOpcode : uint32_t {
     ListApps      = 0x01, // uint32_t page → AppSandboxPage
     SetPermission = 0x02, // AppSandboxPermRequest → ack
     PermsChanged  = 0x03, // broadcast (no payload — shell re-fetches)
+    // broadcast: AppSandboxConsentRequest — a sandboxed app asked for a
+    // capability the user has never decided on; its request is held until the
+    // shell's answer arrives as SetPermission (allow or deny), then replayed.
+    ConsentRequested = 0x04,
 };
+
+struct AppSandboxConsentRequest {
+    char     identifier_[64];
+    char     display_name_[48];
+    uint32_t permission_;  // 1=cam, 2=mic, 5=screencapture
+    uint8_t  pad_[140];    // 64+48+4+140 = 256
+};
+static_assert(sizeof(AppSandboxConsentRequest) == 256);
 
 struct AppSandboxPage {
     uint32_t page_;

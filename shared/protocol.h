@@ -1768,7 +1768,7 @@ static_assert(sizeof(RemoteDesktopPasswordRequest) <= 256);
 enum class BookmarkOpcode : uint32_t {
     Add          = 0x01, // BookmarkRequest → ack
     Remove       = 0x02, // BookmarkRequest (url_ used as key) → ack
-    List         = 0x03, // page index in payload[0..3] → BookmarkPage responses
+    List         = 0x03, // page index in payload[0..3] → one BookmarkPage
     BookmarkPage = 0x04, // compositor → client: one page of results
     Clear        = 0x05, // remove all bookmarks → ack
 };
@@ -2158,7 +2158,13 @@ enum class FileChooserOpcode : uint32_t {
     SaveFile  = 0x03,  // app → service: save-as dialog
     Show      = 0x04,  // service → xshell broadcast: present native picker
     Respond   = 0x05,  // xshell → service: user finished selection
-    Response  = 0x06,  // service broadcast → all: result (matched by request_id_)
+    Response  = 0x06,  // service → the requester: result (matched by request_id_)
+    // The powerbox, for sandboxed apps: the user picks in the shell, the compositor
+    // opens the file, and the app gets that one descriptor and nothing else. One
+    // reply to the Call, when the user has answered: count_ == 1 with the fd attached
+    // and path_ set; cancelled_ == 1; or count_ == 0 with the reason in path_.
+    OpenFd    = 0x07,  // app → service: read + write where allowed, else read-only
+    SaveFd    = 0x08,  // app → service: writable, created if new, contents kept
 };
 
 // Sent by app for OpenFile/OpenFiles/SaveFile; reused as Show broadcast payload.
@@ -2650,8 +2656,8 @@ static_assert(sizeof(WeatherStatusResponse) == 256);
 // Uses geom/gpart/zpool/mount CLI tools; runs as compositor (outside Capsicum).
 
 enum class DiskOpcode : uint32_t {
-    ListDisks      = 0x01, // → paged DiskListPage
-    ListPartitions = 0x02, // payload: DiskNameRequest → paged PartitionListPage
+    ListDisks      = 0x01, // payload: page index → DiskListPage
+    ListPartitions = 0x02, // payload: DiskPartitionsRequest → PartitionListPage
     Mount          = 0x03, // payload: DiskMountRequest → DiskStatusResponse
     Unmount        = 0x04, // payload: DiskNameRequest (device) → DiskStatusResponse
     Format         = 0x05, // payload: DiskFormatRequest → DiskStatusResponse (async)
@@ -2719,6 +2725,11 @@ struct DiskNameRequest { // 256 bytes — used for ListPartitions, Unmount, Ejec
     char name_[256];
 };
 static_assert(sizeof(DiskNameRequest) == 256);
+
+struct DiskPartitionsRequest { // ListPartitions: one page of one disk's partitions
+    char     disk_[32];
+    uint32_t page_;
+};
 
 struct DiskMountRequest { // 256 bytes
     char device_[128];

@@ -7099,6 +7099,7 @@ static_assert(sizeof(DefaultAppRequest) == 256);
 // shared-memory fd attached to the reply (bodies outgrow a 256-byte payload).
 enum class FetchOpcode : uint32_t {
     Get              = 0x01,  // app → compositor: FetchRequest; reply FetchReply (+ fd when ok)
+    Connect          = 0x02,  // app → compositor: NetConnectRequest; reply NetConnectReply (+ socket when ok)
     ProviderRegister = 0x10,  // xfetch → compositor: "I serve com.freebsdx.Fetch"
     ProviderReply    = 0x11,  // xfetch → compositor: FetchReply (+ fd) for a relayed Get
 };
@@ -7127,5 +7128,20 @@ struct FetchReply {
     uint8_t  pad_[236];
 };
 static_assert(sizeof(FetchReply) == 256);
+
+// A TCP connection to a port the app's policy allows (fetch_policy::mayConnect):
+// the compositor resolves and connects, the app gets only that socket.
+struct NetConnectRequest {
+    uint16_t port_;
+    uint16_t pad_;
+    char     host_[252];   // NUL-terminated
+};
+static_assert(sizeof(NetConnectRequest) == 256);
+
+struct NetConnectReply {
+    int32_t status_;       // FetchStatus
+    char    error_[252];   // why it failed
+};
+static_assert(sizeof(NetConnectReply) == 256);
 
 } // namespace fbx::shared

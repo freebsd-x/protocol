@@ -7122,8 +7122,15 @@ enum class FetchStatus : int32_t {
     HttpError    = 6,   // non-2xx; http_status_ says which
 };
 
+// FetchRequest flags. kFetchWeb: browsing, for the one client allowed to (see
+// fetch_policy.h): any public host, redirects followed, and a body that starts with
+// "<final url>\n<content type>\n", kept whatever the HTTP status.
+inline constexpr uint32_t kFetchWeb = 1;
+// With kFetchWeb, for addresses too long for url_: the attached descriptor holds it.
+inline constexpr uint32_t kFetchUrlInFd = 2;
+
 struct FetchRequest {
-    uint32_t flags_;      // reserved, 0
+    uint32_t flags_;
     char     url_[252];   // NUL-terminated
 };
 static_assert(sizeof(FetchRequest) == 256);

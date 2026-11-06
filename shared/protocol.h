@@ -191,6 +191,10 @@ enum class InputEventType : uint32_t {
     //                modifiers_ = controller index (0-based)
     GamepadButton = 30,
     GamepadAxis   = 31,
+
+    // Compositor → Wayland bridge: the pointer is now over this surface (value_a_;
+    // 0 = none of yours). Its MouseMoves are relative to that surface's origin.
+    PointerSurface = 46,
 };
 
 struct InputMessage {
@@ -224,7 +228,11 @@ enum class RenderMessageStatus : uint32_t {
     // Bridge→server: xdg_toplevel parent set. stride_ = parent surface_id (0 = unset).
     ToplevelParentSet = 11,
     // Bridge→server: client-initiated resize (CSD). stride_ = XDG resize edge bitmask.
-    ResizeBegin = 12
+    ResizeBegin = 12,
+    // Bridge→server: a frame in shared memory, for clients with no GPU buffers. The
+    // fd is a memory file sealed against shrinking, tightly packed RGBA8 of
+    // width_ × height_. See xserver/shm_frame.h.
+    ShmFrame = 13
 };
 
 // Reserved shell surface ids. The desktop shell uses kShellSurfaceId; the lock

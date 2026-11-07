@@ -7128,6 +7128,9 @@ enum class FetchStatus : int32_t {
 inline constexpr uint32_t kFetchWeb = 1;
 // With kFetchWeb, for addresses too long for url_: the attached descriptor holds it.
 inline constexpr uint32_t kFetchUrlInFd = 2;
+// With kFetchWeb, a form's POST: the attached descriptor holds
+// "<url>\n<content type>\n<body>", and url_ is unused.
+inline constexpr uint32_t kFetchPost = 4;
 
 struct FetchRequest {
     uint32_t flags_;

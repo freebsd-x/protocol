@@ -7131,6 +7131,9 @@ inline constexpr uint32_t kFetchUrlInFd = 2;
 // With kFetchWeb, a form's POST: the attached descriptor holds
 // "<url>\n<content type>\n<body>", and url_ is unused.
 inline constexpr uint32_t kFetchPost = 4;
+// With kFetchWeb: send and keep cookies. Our engine sets it for pages, forms and files
+// from the same site as the page; anything else goes without, so no third party tracks.
+inline constexpr uint32_t kFetchCookies = 8;
 
 struct FetchRequest {
     uint32_t flags_;

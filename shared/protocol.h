@@ -7134,6 +7134,11 @@ inline constexpr uint32_t kFetchPost = 4;
 // With kFetchWeb: send and keep cookies. Our engine sets it for pages, forms and files
 // from the same site as the page; anything else goes without, so no third party tracks.
 inline constexpr uint32_t kFetchCookies = 8;
+// With kFetchWeb, a script's request (fetch, XMLHttpRequest): the attached descriptor
+// holds "<method>\n<url>\n" then "Name: value\n" header lines, a blank line, and the
+// body; url_ is unused. The reply's body starts "<final url>\n<content type>\n<n>\n"
+// and then n bytes of response headers ("name: value\r\n"; never Set-Cookie).
+inline constexpr uint32_t kFetchScript = 16;
 
 struct FetchRequest {
     uint32_t flags_;

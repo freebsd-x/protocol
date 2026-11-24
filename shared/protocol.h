@@ -47,6 +47,7 @@ struct ImageData {
     uint32_t pixel_height_;
     float uv_x0_ = 0.0f, uv_y0_ = 0.0f; // texture UV top-left  (default: full image)
     float uv_x1_ = 1.0f, uv_y1_ = 1.0f; // texture UV bottom-right
+    float opacity_ = 1.0f;
 };
 
 // Represents text to be rendered via SDF

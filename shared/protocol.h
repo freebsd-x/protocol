@@ -1514,7 +1514,7 @@ struct AccessibilityToggleRequest {
 static_assert(sizeof(AccessibilityToggleRequest) <= 256);
 
 // ─── Lock Screen ─────────────────────────────────────────────────────────────
-// com.freebsdx.Lock — screensaver/idle lock; PAM authentication in compositor.
+// com.freebsdx.Lock — the lock screen; PAM authentication in compositor.
 //
 // Flow (lock):
 //   1. Idle timer fires OR PowerService triggers suspend/lid-close → Lock::Lock sent
@@ -1558,48 +1558,23 @@ struct LockTimeoutRequest {
 };
 static_assert(sizeof(LockTimeoutRequest) <= 256);
 
-// ─── Screen Saver ─────────────────────────────────────────────────────────────
-// com.freebsdx.ScreenSaver — visual idle screen saver (separate from lock screen).
-// Activates before the lock screen when the user is idle; any input dismisses it.
-// If the lock timeout also expired while the saver was showing, dismissal triggers
-// LockService::lock(). Fullscreen video calls Inhibit to suppress the saver.
-//
-// Flow (activate):
-//   1. ScreenSaverService::pollIdle() fires every 10 s → elapsed ≥ timeout_secs_ → activate().
-//   2. Service forks ScreenSaver.xapp with mode as argv[1] ("blank"/"clock"/"matrix").
-//   3. App runs with is_shell=true → fullscreen compositor layer over all windows.
-//
-// Flow (deactivate):
-//   1. Any user input → main.cc calls resetIdleTimer() → if active_, deactivate().
-//   2. deactivate() sends SIGTERM to saver process, broadcasts StateChanged.
-//   3. If lock timeout also expired → LockService::lock() is triggered.
-//
-enum class ScreenSaverOpcode : uint32_t {
-    GetState     = 0x01, // → ScreenSaverState (any app)
-    SetConfig    = 0x02, // ScreenSaverConfig → ack (non-sandboxed)
-    GetConfig    = 0x03, // → ScreenSaverConfig (any app)
-    Inhibit      = 0x04, // → ack; increments inhibit counter; sandboxed apps OK
-    Uninhibit    = 0x05, // → ack; decrements inhibit counter; sandboxed apps OK
-    Register     = 0x06, // ScreenSaver.xapp → compositor: "I am the saver"
-    StateChanged = 0x07, // broadcast: active_ / enabled_ changed (ScreenSaverState)
+// ─── Idle ─────────────────────────────────────────────────────────────────────
+// com.freebsdx.Idle — nobody touching the machine: the screen dims, the lock screen
+// comes up, the screen goes dark (delays: ScreenLock's and ScreenTimeout's). An app
+// playing a video holds that off with Hold until Release, or until it's gone.
+
+enum class IdleOpcode : uint32_t {
+    GetState = 0x01, // → IdleState (any app)
+    Hold     = 0x02, // → IdleState; once per client (any app)
+    Release  = 0x03, // → IdleState
 };
 
-struct ScreenSaverState {
-    uint32_t active_;       // 1 = saver currently showing
-    uint32_t enabled_;      // 1 = timeout_secs_ > 0
-    uint32_t inhibited_;    // 1 = at least one Inhibit call outstanding
-    uint32_t timeout_secs_; // current configured timeout (0 = disabled)
-    uint32_t mode_;         // 0=blank, 1=clock, 2=matrix
-    uint8_t  pad_[236];
-};
-static_assert(sizeof(ScreenSaverState) <= 256);
-
-struct ScreenSaverConfig {
-    uint32_t timeout_secs_; // 0 = disabled; seconds of idle before activation
-    uint32_t mode_;          // 0=blank, 1=clock, 2=matrix
+struct IdleState {
+    uint32_t held_;   // 1 = something holds idle off
+    uint32_t phase_;  // 0 = on, 1 = dimmed, 2 = off
     uint8_t  pad_[248];
 };
-static_assert(sizeof(ScreenSaverConfig) <= 256);
+static_assert(sizeof(IdleState) == 256);
 
 // ─── Login Manager ────────────────────────────────────────────────────────────
 // com.freebsdx.Login — pre-session greeter (xlogin); authenticates via PAM and
@@ -4112,7 +4087,7 @@ enum class ScreenTimeoutOpcode : uint32_t {
 };
 
 struct ScreenTimeoutState {
-    uint32_t timeout_secs_; // 0 = never, else auto-lock delay in seconds
+    uint32_t timeout_secs_; // 0 = never, else seconds without input before the screen goes dark
     uint8_t  pad_[252];     // 4+252 = 256
 };
 static_assert(sizeof(ScreenTimeoutState) == 256);
@@ -6249,7 +6224,8 @@ struct ScreenLockPolicy {
     uint32_t timeout_seconds_;  // 0=never, otherwise idle timeout
     uint32_t require_password_; // 1 = ask password on wake
     uint32_t lock_on_sleep_;    // 1 = lock when lid closes / system sleeps
-    uint8_t  pad_[240];         // 16+240 = 256
+    uint32_t background_;       // the lock screen's: 0 = leave as it is, 1 = wallpaper, 2 = matrix rain
+    uint8_t  pad_[236];         // 20+236 = 256
 };
 static_assert(sizeof(ScreenLockPolicy) == 256);
 

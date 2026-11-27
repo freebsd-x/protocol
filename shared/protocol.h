@@ -7085,6 +7085,14 @@ static_assert(sizeof(DefaultAppRequest) == 256);
 enum class FetchOpcode : uint32_t {
     Get              = 0x01,  // app → compositor: FetchRequest; reply FetchReply (+ fd when ok)
     Connect          = 0x02,  // app → compositor: NetConnectRequest; reply NetConnectReply (+ socket when ok)
+    // Browsing goes on in a new process (one per site: see fetch_broker.cc). The browser
+    // attaches what to carry on with (its own format: where to go, its history); the
+    // compositor has the shell start the Browser with "xweb-handoff:<token>" and answers
+    // with FetchReply Ok once the new process has taken it (Unavailable if it can't).
+    Handoff          = 0x03,
+    // The new process: FetchRequest.url_ is the token; reply FetchReply Ok + fd with
+    // what was handed over. Once only. Its window takes the old one's place.
+    TakeHandoff      = 0x04,
     ProviderRegister = 0x10,  // xfetch → compositor: "I serve com.freebsdx.Fetch"
     ProviderReply    = 0x11,  // xfetch → compositor: FetchReply (+ fd) for a relayed Get
 };
